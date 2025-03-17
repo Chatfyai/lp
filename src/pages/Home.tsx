@@ -148,10 +148,10 @@ const Home = () => {
         
         <SectionTitle 
           title="Produtos em Destaque" 
-          subtitle=""
+          subtitle="Nossa seleção especial para você"
         />
         
-        <div className="grid grid-cols-2 gap-5 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+        <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '0.4s' }}>
           {products.map(product => (
             <div key={`${product.id}-${lastUpdate}`}>
               <ProductCard 
@@ -165,12 +165,12 @@ const Home = () => {
           ))}
         </div>
         
-        <div className="text-center mt-4 mb-6">
+        <div className="text-center mt-4">
           <a 
             href="#" 
-            className="inline-flex items-center text-sm font-medium text-green-600 hover:text-green-700"
+            className="inline-block mt-3 text-store-highlight font-medium text-sm hover:underline"
           >
-            Ver todos os produtos <ArrowRight size={16} className="ml-1" />
+            Ver todos os produtos <ArrowRight size={14} className="inline ml-1" />
           </a>
         </div>
         
@@ -232,7 +232,7 @@ const Home = () => {
         
         <SectionTitle 
           title="Mais Links" 
-          subtitle=""
+          subtitle="Acesse nossos outros serviços"
         />
         
         <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.6s' }}>
