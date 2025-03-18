@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface LogoProps {
@@ -32,11 +33,36 @@ const Logo = ({ alt = "Logo da Loja" }: LogoProps) => {
         if (data && data.store_image) {
           console.log('Logo encontrada:', data.store_image);
           
+          let logoUrl = data.store_image;
+          
+          // Verificar se é um UUID que pode referenciar uma imagem na tabela images
+          if (logoUrl.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            try {
+              // Tentar buscar da tabela de imagens usando a API pública
+              const response = await fetch(`${process.env.VITE_SUPABASE_URL || 'https://soiwkehhnccoestmjjmg.supabase.co'}/rest/v1/images?select=file_path&id=eq.${logoUrl}`, {
+                headers: {
+                  'apikey': process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvaXdrZWhobmNjb2VzdG1qam1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk4MzE2MTcsImV4cCI6MjA1NTQwNzYxN30.mgf0MAL7dTL3ek34wqrWu4f2Wxjghbws23-FIgIcRJ4',
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              if (response.ok) {
+                const imagesData = await response.json();
+                if (imagesData && imagesData.length > 0 && imagesData[0].file_path) {
+                  logoUrl = imagesData[0].file_path;
+                  console.log("Imagem do logo encontrada na tabela images:", logoUrl);
+                }
+              }
+            } catch (imgErr) {
+              console.warn("Não foi possível carregar imagem do logo da tabela images:", imgErr);
+            }
+          }
+          
           // Adicionar timestamp para evitar cache
           const cacheBuster = `?t=${Date.now()}`;
-          const formattedUrl = data.store_image.includes('?') 
-            ? data.store_image.split('?')[0] + cacheBuster
-            : data.store_image + cacheBuster;
+          const formattedUrl = logoUrl.includes('?') 
+            ? logoUrl.split('?')[0] + cacheBuster
+            : logoUrl + cacheBuster;
             
           setImageUrl(formattedUrl);
         } else {
@@ -50,10 +76,6 @@ const Logo = ({ alt = "Logo da Loja" }: LogoProps) => {
     };
 
     fetchLogo();
-    
-    // Configurar verificação periódica
-    const interval = setInterval(fetchLogo, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   // Imagem padrão se não houver imagem carregada
@@ -61,17 +83,25 @@ const Logo = ({ alt = "Logo da Loja" }: LogoProps) => {
   
   return (
     <div className="relative w-24 h-24 mx-auto mb-4">
-      {/* Círculo de carregamento */}
-      <div className={`absolute inset-0 bg-gray-200 rounded-full ${isLoaded && !error ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}></div>
+      {/* Indicador de carregamento */}
+      {!isLoaded && !error && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded-full">
+          <Loader2 className="h-8 w-8 animate-spin text-green-500" />
+        </div>
+      )}
       
       {/* Imagem carregada ou padrão */}
       <img 
         src={imageUrl || defaultImage} 
         alt={alt}
-        className="w-24 h-24 rounded-full mx-auto object-cover border-4 border-store-highlight shadow-md"
-        onLoad={() => setIsLoaded(true)}
+        className={`w-24 h-24 rounded-full mx-auto object-cover border-4 border-store-highlight shadow-md transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => {
+          setIsLoaded(true);
+          setError(false);
+        }}
         onError={() => {
           console.error('Erro ao carregar imagem:', imageUrl);
+          setIsLoaded(true);
           setError(true);
         }}
       />
