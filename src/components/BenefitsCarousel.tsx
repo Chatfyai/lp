@@ -84,7 +84,7 @@ const BenefitsCarousel = () => {
 
   return (
     <div className="w-full my-4 overflow-hidden bg-white relative">
-      <h3 className="text-center text-lg font-medium text-gray-800 mb-3 pt-3">Benefícios da naturalys</h3>
+      <h3 className="text-center text-lg font-bold text-[#16A34A] mb-3 pt-3">Benefícios da naturalys</h3>
       
       {/* Indicação visual de que há mais conteúdo para rolagem */}
       <div className="flex items-center justify-center gap-1 mb-2">
