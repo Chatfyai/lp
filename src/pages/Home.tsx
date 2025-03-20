@@ -5,7 +5,6 @@ import ProductCard from '@/components/ProductCard';
 import StoreStatus from '@/components/StoreStatus';
 import BenefitsCarousel from '@/components/BenefitsCarousel';
 import SectionTitle from '@/components/SectionTitle';
-import SocialLinks from '@/components/SocialLinks';
 import { ArrowRight, Loader2, ShoppingCart } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
@@ -427,10 +426,6 @@ const Home = () => {
                 <span className="font-medium text-lg">Fazer pedido</span>
               </div>
             </a>
-          </div>
-          
-          <div className="flex justify-center mt-4">
-            <SocialLinks />
           </div>
           
           <div className="text-xs text-gray-400 mt-5 mb-2 text-center">

@@ -6,7 +6,9 @@ import {
   FiMessageCircle, 
   FiHeart, 
   FiPackage, 
-  FiBox 
+  FiBox,
+  FiCreditCard,
+  FiLink
 } from 'react-icons/fi';
 
 interface BenefitItem {
@@ -19,6 +21,7 @@ const BenefitsCarousel = () => {
 
   // Lista de benefícios com ícones e textos
   const benefits: BenefitItem[] = [
+    
     {
       icon: <FiTruck className="w-7 h-7 text-[#16A34A]" />,
       text: "Entrega super rápida"
@@ -26,6 +29,14 @@ const BenefitsCarousel = () => {
     {
       icon: <FiShoppingBag className="w-7 h-7 text-[#16A34A]" />,
       text: "Enviamos para todo o Brasil"
+    },
+    {
+      icon: <FiCreditCard className="w-7 h-7 text-[#16A34A]" />,
+      text: "Parcelamos sem juros"
+    },
+    {
+      icon: <FiLink className="w-7 h-7 text-[#16A34A]" />,
+      text: "Aceitamos link de pagamentos"
     },
     {
       icon: <FiShield className="w-7 h-7 text-[#16A34A]" />,
@@ -73,11 +84,11 @@ const BenefitsCarousel = () => {
 
   return (
     <div className="w-full my-4 overflow-hidden bg-white relative">
-      <h3 className="text-center text-lg font-medium text-gray-800 mb-3 pt-3">Benefícios</h3>
+      <h3 className="text-center text-lg font-medium text-gray-800 mb-3 pt-3">Benefícios da naturalys</h3>
       
       {/* Indicação visual de que há mais conteúdo para rolagem */}
       <div className="flex items-center justify-center gap-1 mb-2">
-        {[...Array(7)].map((_, i) => (
+        {[...Array(9)].map((_, i) => (
           <div 
             key={i} 
             className={`h-1 rounded-full ${i === 0 ? 'w-5 bg-[#16A34A]' : 'w-1 bg-gray-200'}`}
