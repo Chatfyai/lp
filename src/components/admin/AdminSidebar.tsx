@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Link as LinkIcon, ShoppingBag, BarChart, Settings as SettingsIcon, Image } from 'lucide-react';
+import { ChevronRight, Link as LinkIcon, ShoppingBag, BarChart, Settings as SettingsIcon, Bookmark } from 'lucide-react';
 
 interface AdminSidebarProps {
   activeSection: string;
@@ -7,9 +7,9 @@ interface AdminSidebarProps {
   sections: {
     MAIN_BUTTONS: string;
     PRODUCTS: string;
+    CATALOG: string;
     STATISTICS: string;
     SETTINGS: string;
-    IMAGES: string;
   };
 }
 
@@ -53,16 +53,16 @@ const AdminSidebar = ({ activeSection, onSectionChange, sections }: AdminSidebar
         </button>
         
         <button
-          onClick={() => onSectionChange(sections.IMAGES)}
+          onClick={() => onSectionChange(sections.CATALOG)}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-md transition-all text-left ${
-            isActive(sections.IMAGES)
+            isActive(sections.CATALOG)
               ? 'bg-white bg-opacity-10 text-white'
               : 'text-gray-300 hover:bg-white hover:bg-opacity-5'
           }`}
         >
-          <Image size={18} />
-          <span>Gerenciar Imagens</span>
-          {isActive(sections.IMAGES) && <ChevronRight size={16} className="ml-auto" />}
+          <Bookmark size={18} />
+          <span>Catálogo dos Produtos</span>
+          {isActive(sections.CATALOG) && <ChevronRight size={16} className="ml-auto" />}
         </button>
         
         <button

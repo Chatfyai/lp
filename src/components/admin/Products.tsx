@@ -66,7 +66,7 @@ const Products = ({ onUpdate }: ProductsProps) => {
     
     const newProduct: Omit<Product, 'id'> = {
       name: 'Novo Produto',
-      price: 'R$ 0,00',
+      price: '',
       image: 'https://picsum.photos/id/237/300/300',
       order_index: highestOrder + 1
     };
@@ -268,6 +268,77 @@ const Products = ({ onUpdate }: ProductsProps) => {
     }
   };
 
+  const handleEditProduct = (product: Product) => {
+    return (
+      <Card key={product.id} className="p-4 mb-4 transition-all border border-gray-200">
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700">Nome do Produto</label>
+            <Input 
+              type="text" 
+              value={tempProduct?.name || ''} 
+              onChange={(e) => setTempProduct({...tempProduct!, name: e.target.value})}
+              className="mt-1"
+            />
+          </div>
+          
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Imagem do Produto</label>
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              <div className="w-full md:w-1/3 mb-4 md:mb-0">
+                <div className="relative bg-gray-100 rounded-lg overflow-hidden border aspect-square">
+                  {tempProduct?.image ? (
+                    <img 
+                      src={tempProduct.image} 
+                      alt={tempProduct.name}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        // Fallback se a imagem não carregar
+                        e.currentTarget.src = 'https://picsum.photos/id/237/300/300';
+                      }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                      <Image size={48} />
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              <div className="w-full md:w-2/3 space-y-4">
+                <div>
+                  <div className="text-sm font-medium mb-2">Upload de Imagem</div>
+                  <div className="border border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
+                    <ImageUpload 
+                      onUploadComplete={(imageUrl) => handleImageUpload(product.id, imageUrl)} 
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Faça upload de uma imagem do seu computador. Formatos suportados: JPG, PNG, GIF, WebP.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={handleCancel}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={() => handleSave(product.id)}
+            >
+              Salvar Alterações
+            </Button>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -295,87 +366,12 @@ const Products = ({ onUpdate }: ProductsProps) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {products.map(product => (
-            <Card key={product.id} className="overflow-hidden">
-              <div className="p-4">
-                {editMode === product.id ? (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Nome do Produto</label>
-                      <Input 
-                        value={tempProduct?.name} 
-                        onChange={(e) => setTempProduct(prev => prev ? {...prev, name: e.target.value} : null)} 
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Preço</label>
-                      <Input 
-                        value={tempProduct?.price} 
-                        onChange={(e) => setTempProduct(prev => prev ? {...prev, price: e.target.value} : null)} 
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Preço Promocional (opcional)</label>
-                      <Input 
-                        value={tempProduct?.promo_price || ''} 
-                        placeholder="Ex: R$ 49,90"
-                        onChange={(e) => setTempProduct(prev => prev ? {...prev, promo_price: e.target.value} : null)} 
-                      />
-                      <p className="text-xs text-gray-500">Deixe em branco para não exibir preço promocional</p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Imagem do Produto</label>
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                        <div className="relative w-full sm:w-24 h-24 overflow-hidden rounded-md bg-gray-50 border">
-                          <img 
-                            src={tempProduct?.image} 
-                            alt={tempProduct?.name} 
-                            className="absolute inset-0 h-full w-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <ImageSelector
-                            onSelect={(url) => handleImageSelect(product.id, url)}
-                            buttonText="Selecionar Imagem"
-                          />
-                          <ImageUpload onUploadComplete={(imageUrl) => handleImageUpload(product.id, imageUrl)} />
-                          <p className="text-xs text-gray-500 mt-1">Recomendamos imagens quadradas de pelo menos 500x500px</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex space-x-2">
-                      <Button 
-                        onClick={() => handleSave(product.id)} 
-                        size="sm" 
-                        className="bg-store-highlight hover:bg-opacity-90 flex-1"
-                      >
-                        Salvar
-                      </Button>
-                      <Button 
-                        onClick={handleCancel} 
-                        size="sm" 
-                        variant="outline" 
-                        className="flex-1"
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
+            editMode === product.id ? handleEditProduct(product) : (
+              <Card key={product.id} className="overflow-hidden">
+                <div className="p-4">
                   <div className="flex">
                     <div className="flex-1">
                       <h3 className="font-medium">{product.name}</h3>
-                      {product.promo_price ? (
-                        <div>
-                          <p className="text-gray-500 text-xs line-through">{product.price}</p>
-                          <p className="text-red-600 font-bold">{product.promo_price}</p>
-                        </div>
-                      ) : (
-                        <p className="text-store-highlight font-bold">{product.price}</p>
-                      )}
                     </div>
                     <div className="flex space-x-2">
                       <Button 
@@ -395,16 +391,16 @@ const Products = ({ onUpdate }: ProductsProps) => {
                       </Button>
                     </div>
                   </div>
-                )}
-              </div>
-              <div className="relative pb-[75%] overflow-hidden bg-gray-100">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="absolute inset-0 h-full w-full object-cover" 
-                />
-              </div>
-            </Card>
+                </div>
+                <div className="relative pb-[75%] overflow-hidden bg-gray-100">
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    className="absolute inset-0 h-full w-full object-cover" 
+                  />
+                </div>
+              </Card>
+            )
           ))}
         </div>
       )}

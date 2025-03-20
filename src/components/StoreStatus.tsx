@@ -105,7 +105,11 @@ const StoreStatus = ({ settings }: StoreStatusProps) => {
   
   return (
     <div 
-      className={`inline-block px-4 py-2 rounded-full text-sm font-bold text-white shadow-sm my-4 mx-auto flex items-center justify-center transition-all duration-500 ${isOpen ? 'bg-store-open animate-gentle-pulse' : 'bg-store-closed'}`}
+      className={`inline-block px-4 py-2 rounded-full text-sm font-bold shadow-sm my-4 mx-auto flex items-center justify-center transition-all duration-500 ${
+        isOpen 
+          ? 'bg-green-100 text-green-800 border border-green-200' 
+          : 'bg-red-50 text-red-700 border border-red-100'
+      }`}
     >
       {message}
     </div>

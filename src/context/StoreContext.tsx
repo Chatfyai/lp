@@ -105,7 +105,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Função para buscar apenas produtos
   const refreshProducts = useCallback(async () => {
     try {
-      const timestamp = Date.now();
       const { data, error: productsError } = await supabase
         .from('products')
         .select('*')
@@ -115,43 +114,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         throw productsError;
       }
       
-      // Buscar imagens do storage do Supabase
-      let imagesMap = {};
-      try {
-        // Tentar buscar da tabela de imagens usando a API pública
-        const response = await fetch(`${process.env.VITE_SUPABASE_URL || 'https://soiwkehhnccoestmjjmg.supabase.co'}/rest/v1/images?select=id,file_path&is_active=eq.true`, {
-          headers: {
-            'apikey': process.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvaXdrZWhobmNjb2VzdG1qam1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk4MzE2MTcsImV4cCI6MjA1NTQwNzYxN30.mgf0MAL7dTL3ek34wqrWu4f2Wxjghbws23-FIgIcRJ4',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const imagesData = await response.json();
-          if (imagesData && imagesData.length > 0) {
-            imagesMap = imagesData.reduce((acc, img) => {
-              acc[img.id] = img.file_path;
-              return acc;
-            }, {});
-            console.log("Mapa de imagens carregado:", Object.keys(imagesMap).length, "imagens");
-          }
-        }
-      } catch (imgErr) {
-        console.warn("Não foi possível carregar imagens:", imgErr);
-      }
-      
-      // Processar as URLs de imagem
+      // Processar as URLs de imagem de maneira simplificada
       const processedData = data?.map(product => {
-        // Verificar se é um UUID que pode referenciar uma imagem na tabela images
         let imageUrl = product.image;
-        if (product.image && product.image.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-          // Se a imagem for um UUID e existir no mapa de imagens, use a URL da tabela images
-          imageUrl = imagesMap[product.image] || product.image;
-        }
         
-        // Adicionar timestamp para evitar cache
-        if (imageUrl && !imageUrl.includes('?')) {
-          imageUrl = `${imageUrl}?t=${timestamp}`;
+        // Verifica se a URL já é http ou base64
+        if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
+          // Para outros formatos, usar uma imagem padrão do Picsum
+          imageUrl = "https://picsum.photos/id/237/300/300";
         }
         
         return {

@@ -11,7 +11,6 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import SupabaseTest from "./pages/SupabaseTest";
-import ImageManager from "./components/admin/ImageManager";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +27,6 @@ const App = () => (
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/admin" element={<Admin />} />
-                <Route path="/admin/images" element={<ImageManager />} />
                 <Route path="/supabase-test" element={<SupabaseTest />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

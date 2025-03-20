@@ -15,11 +15,27 @@ const ProductCard = ({ name, price, promoPrice, image, href }: ProductCardProps)
   const [hasError, setHasError] = useState(false);
   
   // Imagem padrão caso a URL seja inválida
-  const defaultImage = "/lovable-uploads/fd1285cf-8fdd-4e0e-99f8-0bf38a976c78.png";
+  const defaultImage = "https://picsum.photos/id/237/300/300";
 
-  // Garantir que a imagem tenha um timestamp para evitar cache
-  const imageUrl = !image ? defaultImage : 
-                  image.includes('?') ? image : `${image}?t=${Date.now()}`;
+  // Obter URL da imagem
+  const getImageUrl = () => {
+    if (!image) return defaultImage;
+    
+    // Se já for uma URL http, usar diretamente
+    if (image.startsWith('http')) {
+      return image;
+    }
+    
+    // Se for um dado base64, retorna diretamente
+    if (image.startsWith('data:')) {
+      return image;
+    }
+    
+    // Caso contrário, assumir que é uma imagem do Picsum
+    return "https://picsum.photos/id/237/300/300";
+  };
+
+  const imageUrl = getImageUrl();
 
   return (
     <a href={href} className="block h-full group">
@@ -38,10 +54,15 @@ const ProductCard = ({ name, price, promoPrice, image, href }: ProductCardProps)
             setIsLoading(false);
             setHasError(false);
           }}
-          onError={() => {
-            setIsLoading(false);
-            setHasError(true);
+          onError={(e) => {
             console.error('Erro ao carregar imagem:', image);
+            // Tenta carregar a imagem padrão em caso de erro
+            if (imageUrl !== defaultImage) {
+              (e.target as HTMLImageElement).src = defaultImage;
+            } else {
+              setHasError(true);
+              setIsLoading(false);
+            }
           }}
         />
         
@@ -62,16 +83,7 @@ const ProductCard = ({ name, price, promoPrice, image, href }: ProductCardProps)
       <div className="mt-3 text-left px-1">
         <h3 className="font-medium text-base mb-2 line-clamp-2 group-hover:text-green-700 transition-colors">{name}</h3>
         
-        {hasPromoPrice ? (
-          <div className="flex flex-col">
-            <span className="text-gray-500 text-sm line-through">De: {price}</span>
-            <div className="font-bold text-green-600 text-lg">
-              {promoPrice}
-            </div>
-          </div>
-        ) : (
-          <div className="font-bold text-green-600 text-lg">{price}</div>
-        )}
+        {/* Preços dos produtos removidos */}
       </div>
     </a>
   );

@@ -8,13 +8,14 @@ import MainButtons from '@/components/admin/MainButtons';
 import Products from '@/components/admin/Products';
 import Statistics from '@/components/admin/Statistics';
 import Settings from '@/components/admin/Settings';
+import Catalog from '@/components/admin/Catalog';
 
 const SECTIONS = {
   MAIN_BUTTONS: 'main_buttons',
   PRODUCTS: 'products',
+  CATALOG: 'catalog',
   STATISTICS: 'statistics',
-  SETTINGS: 'settings',
-  IMAGES: 'images'
+  SETTINGS: 'settings'
 };
 
 const Admin = () => {
@@ -35,11 +36,7 @@ const Admin = () => {
   };
 
   const handleSectionChange = (section) => {
-    if (section === SECTIONS.IMAGES) {
-      navigate('/admin/images');
-    } else {
-      setActiveSection(section);
-    }
+    setActiveSection(section);
   };
 
   const renderSection = () => {
@@ -48,6 +45,8 @@ const Admin = () => {
         return <MainButtons onUpdate={() => toast({ title: "Alterações salvas", description: "As alterações foram salvas e aparecerão na página principal." })} />;
       case SECTIONS.PRODUCTS:
         return <Products onUpdate={() => toast({ title: "Alterações salvas", description: "As alterações foram salvas e aparecerão na página principal." })} />;
+      case SECTIONS.CATALOG:
+        return <Catalog onUpdate={() => toast({ title: "Alterações salvas", description: "As alterações foram salvas no catálogo de produtos." })} />;
       case SECTIONS.STATISTICS:
         return <Statistics />;
       case SECTIONS.SETTINGS:
@@ -74,6 +73,7 @@ const Admin = () => {
           <h1 className="text-2xl font-bold text-gray-800">
             {activeSection === SECTIONS.MAIN_BUTTONS && 'Gerenciar Botões Principais'}
             {activeSection === SECTIONS.PRODUCTS && 'Gerenciar Produtos'}
+            {activeSection === SECTIONS.CATALOG && 'Catálogo dos Produtos'}
             {activeSection === SECTIONS.STATISTICS && 'Estatísticas'}
             {activeSection === SECTIONS.SETTINGS && 'Configurações'}
           </h1>
