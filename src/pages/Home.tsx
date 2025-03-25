@@ -455,7 +455,7 @@ const Home = () => {
           
           <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <a 
-              href={`https://wa.me/${settings?.whatsapp_number?.replace(/\D/g, '')}`}
+              href="https://wa.me/5584998561010?text=Ol%C3%A1"
               target="_blank"
               rel="noopener noreferrer"
               className="block bg-green-500 hover:bg-green-600 transition-colors text-white rounded-lg p-4 text-center shadow-md"
