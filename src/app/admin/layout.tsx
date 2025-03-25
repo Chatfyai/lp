@@ -10,7 +10,7 @@ export default function AdminLayout({
     <StoreProvider>
       <div className="flex min-h-screen">
         <div className="w-64 bg-gray-800 text-white p-4">
-          <h1 className="text-xl font-bold mb-6">Painel Admin</h1>
+          <h1 className="text-xl font-bold mb-6">Naturalys - Admin</h1>
           <nav>
             <ul className="space-y-2">
               <li>
