@@ -1,4 +1,4 @@
-import { useEffect, useRef, memo } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { 
   FiShoppingBag, 
   FiTruck, 
@@ -8,7 +8,9 @@ import {
   FiPackage, 
   FiBox,
   FiCreditCard,
-  FiLink
+  FiLink,
+  FiChevronLeft,
+  FiChevronRight
 } from 'react-icons/fi';
 
 interface BenefitItem {
@@ -36,6 +38,8 @@ const BenefitItemComponent = memo(({ benefit }: { benefit: BenefitItem }) => (
 const BenefitsCarousel = () => {
   const carouselRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Lista de benefícios com ícones e textos
   const benefits: BenefitItem[] = [
@@ -77,17 +81,35 @@ const BenefitsCarousel = () => {
     }
   ];
 
+  // Função para calcular o índice ativo
+  const calculateActiveIndex = () => {
+    const carousel = carouselRef.current;
+    if (!carousel) return 0;
+    
+    const scrollPosition = carousel.scrollLeft;
+    const itemWidth = carousel.scrollWidth / benefits.length;
+    const index = Math.round(scrollPosition / itemWidth);
+    
+    return Math.min(index, benefits.length - 1);
+  };
+
   // Função otimizada para scroll automático
   const scrollCarousel = () => {
     const carousel = carouselRef.current;
-    if (!carousel) return;
+    if (!carousel || isPaused) return;
     
     // Se chegou ao final, voltar ao início
     if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 10) {
       carousel.scrollTo({ left: 0, behavior: 'smooth' });
+      setActiveIndex(0);
     } else {
       // Caso contrário, continuar rolando
       carousel.scrollBy({ left: 120, behavior: 'smooth' });
+      
+      // Atualizar o índice ativo após a rolagem
+      setTimeout(() => {
+        setActiveIndex(calculateActiveIndex());
+      }, 500);
     }
     
     // Agendar próximo scroll
@@ -108,6 +130,19 @@ const BenefitsCarousel = () => {
         clearTimeout(scrollTimerRef.current);
       }
     };
+  }, [isPaused]);
+
+  // Efeito para monitorar o scroll e atualizar o indicador ativo
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    
+    const handleScroll = () => {
+      setActiveIndex(calculateActiveIndex());
+    };
+    
+    carousel.addEventListener('scroll', handleScroll);
+    return () => carousel.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Manipulador de interação do usuário - pausar o scroll
@@ -118,7 +153,47 @@ const BenefitsCarousel = () => {
     }
     
     // Retomar o scroll após um período
-    scrollTimerRef.current = window.setTimeout(scrollCarousel, 4000);
+    scrollTimerRef.current = window.setTimeout(() => {
+      scrollCarousel();
+    }, 4000);
+  };
+
+  // Navegação para o item anterior
+  const scrollToPrevious = () => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    
+    setIsPaused(true);
+    if (scrollTimerRef.current) {
+      clearTimeout(scrollTimerRef.current);
+    }
+    
+    const itemWidth = carousel.scrollWidth / benefits.length;
+    carousel.scrollBy({ left: -itemWidth, behavior: 'smooth' });
+    
+    setTimeout(() => {
+      setActiveIndex(calculateActiveIndex());
+      setIsPaused(false);
+    }, 500);
+  };
+
+  // Navegação para o próximo item
+  const scrollToNext = () => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+    
+    setIsPaused(true);
+    if (scrollTimerRef.current) {
+      clearTimeout(scrollTimerRef.current);
+    }
+    
+    const itemWidth = carousel.scrollWidth / benefits.length;
+    carousel.scrollBy({ left: itemWidth, behavior: 'smooth' });
+    
+    setTimeout(() => {
+      setActiveIndex(calculateActiveIndex());
+      setIsPaused(false);
+    }, 500);
   };
 
   return (
@@ -127,29 +202,55 @@ const BenefitsCarousel = () => {
       
       {/* Indicação visual de que há mais conteúdo para rolagem */}
       <div className="flex items-center justify-center gap-1 mb-2">
-        {[...Array(9)].map((_, i) => (
+        {benefits.map((_, i) => (
           <div 
             key={i} 
-            className={`h-1 rounded-full ${i === 0 ? 'w-5 bg-[#16A34A]' : 'w-1 bg-gray-200'}`}
+            className={`h-1 rounded-full transition-all duration-300 ${i === activeIndex ? 'w-5 bg-[#16A34A]' : 'w-1 bg-gray-200'}`}
           />
         ))}
       </div>
       
-      {/* Wrapper do carrossel com controle de scroll horizontal */}
-      <div 
-        ref={carouselRef}
-        className="flex overflow-x-auto pb-3 gap-5 px-4 no-scrollbar touch-pan-x"
-        style={{ 
-          scrollbarWidth: 'none', 
-          msOverflowStyle: 'none',
-          WebkitOverflowScrolling: 'touch'
-        }}
-        onTouchStart={handleUserInteraction}
-        onMouseDown={handleUserInteraction}
-      >
-        {benefits.map((benefit, index) => (
-          <BenefitItemComponent key={index} benefit={benefit} />
-        ))}
+      {/* Botões de navegação */}
+      <div className="relative px-1">
+        <button 
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white rounded-full p-2 shadow-md border border-gray-100 text-[#16A34A] transition-all"
+          onClick={scrollToPrevious}
+          aria-label="Item anterior"
+        >
+          <FiChevronLeft size={24} />
+        </button>
+        
+        <button 
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white rounded-full p-2 shadow-md border border-gray-100 text-[#16A34A] transition-all"
+          onClick={scrollToNext}
+          aria-label="Próximo item"
+        >
+          <FiChevronRight size={24} />
+        </button>
+        
+        {/* Wrapper do carrossel com controle de scroll horizontal */}
+        <div 
+          ref={carouselRef}
+          className="flex overflow-x-auto pb-4 pt-2 gap-5 px-12 no-scrollbar touch-pan-x"
+          style={{ 
+            scrollbarWidth: 'none', 
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+            scrollSnapType: 'x mandatory'
+          }}
+          onTouchStart={handleUserInteraction}
+          onMouseDown={handleUserInteraction}
+        >
+          {benefits.map((benefit, index) => (
+            <div 
+              key={index} 
+              className="scroll-snap-align-start"
+              style={{ scrollSnapAlign: 'start' }}
+            >
+              <BenefitItemComponent benefit={benefit} />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
