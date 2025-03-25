@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 import { 
   FiShoppingBag, 
   FiTruck, 
@@ -16,20 +16,29 @@ interface BenefitItem {
   text: string;
 }
 
+// Ícones pré-renderizados para melhor performance
+const IconCard = memo(({ icon }: { icon: JSX.Element }) => (
+  <div className="bg-white p-3 rounded-full shadow-sm border border-gray-100">
+    {icon}
+  </div>
+));
+
+// Componente de Item do Benefício otimizado
+const BenefitItemComponent = memo(({ benefit }: { benefit: BenefitItem }) => (
+  <div className="flex flex-col items-center justify-start gap-2 min-w-[105px] flex-shrink-0">
+    <IconCard icon={benefit.icon} />
+    <p className="text-center text-xs text-gray-600 w-full">
+      {benefit.text}
+    </p>
+  </div>
+));
+
 const BenefitsCarousel = () => {
   const carouselRef = useRef<HTMLDivElement>(null);
+  const scrollTimerRef = useRef<number | null>(null);
 
   // Lista de benefícios com ícones e textos
   const benefits: BenefitItem[] = [
-    
-    {
-      icon: <FiTruck className="w-7 h-7 text-[#16A34A]" />,
-      text: "Entrega super rápida"
-    },
-    {
-      icon: <FiShoppingBag className="w-7 h-7 text-[#16A34A]" />,
-      text: "Enviamos para todo o Brasil"
-    },
     {
       icon: <FiCreditCard className="w-7 h-7 text-[#16A34A]" />,
       text: "Parcelamos sem juros"
@@ -37,6 +46,14 @@ const BenefitsCarousel = () => {
     {
       icon: <FiLink className="w-7 h-7 text-[#16A34A]" />,
       text: "Aceitamos link de pagamentos"
+    },
+    {
+      icon: <FiTruck className="w-7 h-7 text-[#16A34A]" />,
+      text: "Entrega super rápida"
+    },
+    {
+      icon: <FiShoppingBag className="w-7 h-7 text-[#16A34A]" />,
+      text: "Enviamos para todo o Brasil"
     },
     {
       icon: <FiShield className="w-7 h-7 text-[#16A34A]" />,
@@ -60,27 +77,49 @@ const BenefitsCarousel = () => {
     }
   ];
 
-  // Efeito para iniciar a rolagem automática
-  useEffect(() => {
-    let scrollInterval: NodeJS.Timeout;
+  // Função otimizada para scroll automático
+  const scrollCarousel = () => {
     const carousel = carouselRef.current;
+    if (!carousel) return;
     
-    if (carousel) {
-      // Configurar rolagem automática
-      scrollInterval = setInterval(() => {
-        // Se chegou ao final, voltar ao início
-        if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 10) {
-          carousel.scrollTo({ left: 0, behavior: 'smooth' });
-        } else {
-          // Caso contrário, continuar rolando
-          carousel.scrollBy({ left: 120, behavior: 'smooth' });
-        }
-      }, 3500);
+    // Se chegou ao final, voltar ao início
+    if (carousel.scrollLeft >= carousel.scrollWidth - carousel.clientWidth - 10) {
+      carousel.scrollTo({ left: 0, behavior: 'smooth' });
+    } else {
+      // Caso contrário, continuar rolando
+      carousel.scrollBy({ left: 120, behavior: 'smooth' });
     }
+    
+    // Agendar próximo scroll
+    scrollTimerRef.current = window.setTimeout(scrollCarousel, 3500);
+  };
 
-    // Limpar o intervalo quando o componente for desmontado
-    return () => clearInterval(scrollInterval);
+  // Efeito para iniciar a rolagem automática com otimização de performance
+  useEffect(() => {
+    // Iniciar rolagem após um breve delay para permitir renderização da página
+    const initialTimer = window.setTimeout(() => {
+      scrollCarousel();
+    }, 1000);
+    
+    // Limpar os timers quando o componente for desmontado
+    return () => {
+      clearTimeout(initialTimer);
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
+    };
   }, []);
+
+  // Manipulador de interação do usuário - pausar o scroll
+  const handleUserInteraction = () => {
+    // Cancelar scroll automático durante a interação
+    if (scrollTimerRef.current) {
+      clearTimeout(scrollTimerRef.current);
+    }
+    
+    // Retomar o scroll após um período
+    scrollTimerRef.current = window.setTimeout(scrollCarousel, 4000);
+  };
 
   return (
     <div className="w-full my-4 overflow-hidden bg-white relative">
@@ -105,23 +144,15 @@ const BenefitsCarousel = () => {
           msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch'
         }}
+        onTouchStart={handleUserInteraction}
+        onMouseDown={handleUserInteraction}
       >
         {benefits.map((benefit, index) => (
-          <div 
-            key={index} 
-            className="flex flex-col items-center justify-start gap-2 min-w-[105px] flex-shrink-0"
-          >
-            <div className="bg-white p-3 rounded-full shadow-sm border border-gray-100">
-              {benefit.icon}
-            </div>
-            <p className="text-center text-xs text-gray-600 w-full">
-              {benefit.text}
-            </p>
-          </div>
+          <BenefitItemComponent key={index} benefit={benefit} />
         ))}
       </div>
     </div>
   );
 };
 
-export default BenefitsCarousel; 
+export default memo(BenefitsCarousel); 

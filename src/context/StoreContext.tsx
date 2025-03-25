@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+'use client';
+
+import React, { createContext, useContext, ReactNode, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 // Interfaces para os tipos de dados
@@ -25,6 +27,7 @@ interface MainButton {
   updated_at?: string;
 }
 
+// Defina a interface para as configurações da loja
 interface StoreSettings {
   id: string;
   store_name: string;
@@ -42,6 +45,7 @@ interface StoreSettings {
   sunday_open_time: string;
   sunday_close_time: string;
   store_image: string;
+  logo_url: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -54,161 +58,249 @@ interface StoreContextType {
   isLoading: boolean;
   error: string | null;
   refreshData: () => Promise<void>;
-  refreshProducts: () => Promise<Product[]>;
-  refreshButtons: () => Promise<MainButton[]>;
-  refreshSettings: () => Promise<StoreSettings | null>;
   lastUpdate: number;
 }
 
+// Nome da chave para armazenar os dados em cache
+const CACHE_KEY = 'store_data_cache';
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutos em milissegundos
+
+// Tipo para o objeto de cache completo
+interface CachedData {
+  products: Product[];
+  mainButtons: MainButton[];
+  settings: StoreSettings | null;
+  timestamp: number;
+}
+
+// Carregar dados do cache
+const loadFromCache = (): CachedData | null => {
+  try {
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (!cachedData) return null;
+    
+    const parsed = JSON.parse(cachedData) as CachedData;
+    const now = Date.now();
+    
+    // Verificar se o cache expirou
+    if (now - parsed.timestamp > CACHE_EXPIRY) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    
+    return parsed;
+  } catch (error) {
+    // Em caso de erro, limpar o cache corrompido
+    localStorage.removeItem(CACHE_KEY);
+    return null;
+  }
+};
+
+// Salvar dados no cache
+const saveToCache = (data: CachedData) => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      ...data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    // Ignorar erros de armazenamento (ex. quando o localStorage está cheio)
+    console.warn('Erro ao salvar no cache:', error);
+  }
+};
+
 // Criação do contexto
-const StoreContext = createContext<StoreContextType | null>(null);
+const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 // Hook para usar o contexto
 export const useStore = () => {
   const context = useContext(StoreContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useStore deve ser usado dentro de um StoreProvider');
   }
   return context;
 };
 
+// Configurações padrão
+const defaultSettings: StoreSettings = {
+  id: "",
+  store_name: "Naturalys",
+  description: "Produtos Naturais",
+  whatsapp_number: "",
+  instagram_handle: "",
+  address: "",
+  open_weekdays: false,
+  open_saturday: false,
+  open_sunday: false,
+  weekday_open_time: "",
+  weekday_close_time: "",
+  saturday_open_time: "",
+  saturday_close_time: "",
+  sunday_open_time: "",
+  sunday_close_time: "",
+  store_image: "",
+  logo_url: "",
+  created_at: "",
+  updated_at: "",
+};
+
 // Provider do contexto
-export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [mainButtons, setMainButtons] = useState<MainButton[]>([]);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
-
-  // Função para buscar todos os dados
-  const refreshData = useCallback(async () => {
+  
+  // Usar uma função para buscar todos os dados de uma vez
+  const fetchAllData = useCallback(async (skipCache = false) => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      setError(null);
-      setIsLoading(true);
+      // Verificar se há dados em cache válidos
+      if (!skipCache) {
+        const cachedData = loadFromCache();
+        if (cachedData) {
+          setProducts(cachedData.products);
+          setMainButtons(cachedData.mainButtons);
+          setSettings(cachedData.settings);
+          setLoading(false);
+          setLastUpdate(Date.now());
+          
+          // Buscar dados atualizados em segundo plano
+          setTimeout(() => fetchAllData(true), 0);
+          return;
+        }
+      }
       
-      await Promise.all([
-        refreshProducts(),
-        refreshButtons(),
-        refreshSettings()
+      // Buscar dados em paralelo
+      const [
+        { data: productsData, error: productsError },
+        { data: buttonsData, error: buttonsError },
+        { data: settingsData, error: settingsError }
+      ] = await Promise.all([
+        supabase.from('products').select('*').order('order_index'),
+        supabase.from('main_buttons').select('*').order('order_index'),
+        supabase.from('store_settings').select('*').single()
       ]);
       
+      // Verificar erros
+      if (productsError) throw new Error(`Erro ao buscar produtos: ${productsError.message}`);
+      if (buttonsError) throw new Error(`Erro ao buscar botões: ${buttonsError.message}`);
+      if (settingsError) throw new Error(`Erro ao buscar configurações: ${settingsError.message}`);
+      
+      // Atualizar o estado com os dados buscados
+      setProducts(productsData || []);
+      setMainButtons((buttonsData || []).map(button => ({
+        ...button,
+        status: button.status as 'normal' | 'destaque'
+      })));
+      setSettings(settingsData);
+      
+      if (settingsData) {
+        setSettings({
+          ...settingsData,
+          logo_url: settingsData.logo_url || ""
+        });
+      }
+      
+      // Salvar os dados em cache para acelerar futuros carregamentos
+      saveToCache({
+        products: productsData || [],
+        mainButtons: (buttonsData || []).map(button => ({
+          ...button,
+          status: button.status as 'normal' | 'destaque'
+        })),
+        settings: settingsData,
+        timestamp: Date.now()
+      });
+      
+      // Atualizar o timestamp para forçar re-renderização em componentes que dependem dele
       setLastUpdate(Date.now());
-      setIsLoading(false);
     } catch (err) {
-      console.error('Erro ao atualizar dados:', err);
-      setError(err instanceof Error ? err.message : "Erro ao carregar dados");
-      setIsLoading(false);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido ao buscar dados');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
-  // Função para buscar apenas produtos
-  const refreshProducts = useCallback(async () => {
+  // Função para buscar configurações da loja
+  const fetchSettings = async () => {
     try {
-      const { data, error: productsError } = await supabase
-        .from('products')
-        .select('*')
-        .order('order_index', { ascending: true });
+      setLoading(true);
+      setError(null);
 
-      if (productsError) {
-        throw productsError;
-      }
-      
-      // Processar as URLs de imagem de maneira simplificada
-      const processedData = data?.map(product => {
-        let imageUrl = product.image;
-        
-        // Verifica se a URL já é http ou base64
-        if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('data:')) {
-          // Para outros formatos, usar uma imagem padrão do Picsum
-          imageUrl = "https://picsum.photos/id/237/300/300";
-        }
-        
-        return {
-          ...product,
-          image: imageUrl
-        };
-      }) || [];
-      
-      console.log("Produtos atualizados:", processedData);
-      setProducts(processedData);
-      return processedData;
-    } catch (err) {
-      console.error('Erro ao buscar produtos:', err);
-      throw err;
-    }
-  }, []);
+      console.log('StoreContext: Buscando configurações da loja...');
 
-  // Função para buscar apenas botões
-  const refreshButtons = useCallback(async () => {
-    try {
-      const { data, error: buttonsError } = await supabase
-        .from('main_buttons')
-        .select('*')
-        .order('order_index', { ascending: true });
-
-      if (buttonsError) {
-        throw buttonsError;
-      }
-      
-      // Type cast para o status
-      const typedData = data?.map(item => ({
-        ...item,
-        status: item.status as 'normal' | 'destaque'
-      })) || [];
-      
-      console.log("Botões atualizados:", typedData);
-      setMainButtons(typedData);
-      return typedData;
-    } catch (err) {
-      console.error('Erro ao buscar botões:', err);
-      throw err;
-    }
-  }, []);
-
-  // Função para buscar apenas configurações
-  const refreshSettings = useCallback(async () => {
-    try {
-      const { data, error: settingsError } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('store_settings')
         .select('*')
-        .limit(1)
-        .maybeSingle();
+        .single();
 
-      if (settingsError) {
-        throw settingsError;
+      if (fetchError) {
+        console.log('StoreContext: Erro ao buscar configurações:', fetchError);
+        
+        if (fetchError.code === 'PGRST116') {
+          // Tabela vazia, criar registro inicial
+          console.log('StoreContext: Tabela vazia, criando registro inicial...');
+          
+          const { data: newSettings, error: insertError } = await supabase
+            .from('store_settings')
+            .insert([defaultSettings])
+            .select()
+            .single();
+
+          if (insertError) {
+            throw insertError;
+          }
+
+          console.log('StoreContext: Registro inicial criado:', newSettings);
+          setSettings(newSettings as StoreSettings);
+        } else {
+          throw fetchError;
+        }
+      } else if (data) {
+        // Certifique-se de que todos os campos necessários estejam presentes
+        const completeSettings = {
+          ...defaultSettings,
+          ...data,
+        };
+        
+        console.log('StoreContext: Configurações carregadas:', completeSettings);
+        console.log('StoreContext: Logo URL:', completeSettings.logo_url);
+        
+        setSettings(completeSettings);
       }
-      
-      console.log("Configurações atualizadas:", data);
-      setSettings(data);
-      return data;
     } catch (err) {
-      console.error('Erro ao buscar configurações:', err);
-      throw err;
+      console.error('StoreContext: Erro ao carregar configurações:', err);
+      setError('Erro ao carregar configurações da loja');
+      // Em caso de erro, usar configurações padrão
+      setSettings(defaultSettings);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Carrega as configurações ao iniciar
+  useEffect(() => {
+    fetchSettings();
   }, []);
 
-  // Carregar dados iniciais
-  useEffect(() => {
-    refreshData();
-  }, [refreshData]);
-
-  // Valor do contexto
-  const value = {
+  // Evitar re-renderizações desnecessárias usando useMemo para o valor do contexto
+  const contextValue = useMemo(() => ({
     products,
     mainButtons,
     settings,
-    isLoading,
+    isLoading: loading,
     error,
-    refreshData,
-    refreshProducts,
-    refreshButtons,
-    refreshSettings,
+    refreshData: () => fetchAllData(true),
     lastUpdate
-  };
+  }), [products, mainButtons, settings, loading, error, fetchAllData, lastUpdate]);
 
   return (
-    <StoreContext.Provider value={value}>
+    <StoreContext.Provider value={contextValue}>
       {children}
     </StoreContext.Provider>
   );

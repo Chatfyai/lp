@@ -1,12 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import Logo from '@/components/Logo';
 import LinkCard from '@/components/LinkCard';
 import ProductCard from '@/components/ProductCard';
 import StoreStatus from '@/components/StoreStatus';
-import BenefitsCarousel from '@/components/BenefitsCarousel';
 import SectionTitle from '@/components/SectionTitle';
 import { ArrowRight, Loader2, ShoppingCart } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
+
+// Importar o carrossel com lazy loading
+const BenefitsCarousel = lazy(() => import('@/components/BenefitsCarousel'));
 
 interface MainButton {
   id: string;
@@ -52,18 +54,20 @@ interface StoreSettings {
   updated_at?: string;
 }
 
-// Função para verificar se é uma string base64 válida
+// Função para verificar se é uma string base64 válida - melhorada para performance
 const isBase64Image = (str: string) => {
-  return str && (
-    str.startsWith('data:image/') || 
-    str.startsWith('data:application/octet-stream;base64,') ||
-    str.startsWith('data:')
-  );
+  return str && str.startsWith('data:');
 };
 
-// Função para comprimir imagem base64
-const compressImage = (base64: string, maxWidth = 400, maxHeight = 400, quality = 0.7): Promise<string> => {
+// Função para comprimir imagem base64 - otimizada
+const compressImage = (base64: string, maxWidth = 300, maxHeight = 300, quality = 0.6): Promise<string> => {
   return new Promise((resolve, reject) => {
+    // Se a string não for muito grande, não comprimir
+    if (base64.length < 50000) {
+      resolve(base64);
+      return;
+    }
+    
     // Criar uma imagem a partir do base64
     const img = new Image();
     img.crossOrigin = 'Anonymous';
@@ -92,7 +96,7 @@ const compressImage = (base64: string, maxWidth = 400, maxHeight = 400, quality 
       
       const ctx = canvas.getContext('2d');
       if (!ctx) {
-        reject(new Error('Não foi possível obter contexto do canvas'));
+        resolve(base64); // Se falhar, usar a original
         return;
       }
       
@@ -115,14 +119,14 @@ const compressImage = (base64: string, maxWidth = 400, maxHeight = 400, quality 
     };
     
     img.onerror = () => {
-      reject(new Error('Erro ao carregar imagem para compressão'));
+      resolve(base64); // Se falhar, usar a original
     };
     
     img.src = base64;
   });
 };
 
-// Processa URL da imagem
+// Processa URL da imagem - otimizada
 const processImageUrl = async (image: string) => {
   const defaultImage = "/lovable-uploads/fd1285cf-8fdd-4e0e-99f8-0bf38a976c78.png";
   
@@ -130,15 +134,10 @@ const processImageUrl = async (image: string) => {
   
   if (isBase64Image(image)) {
     // Se for base64 e for grande, comprimir
-    if (image.length > 100000) {
+    if (image.length > 50000) {
       try {
-        const compressed = await compressImage(image);
-        console.log('Imagem de oferta comprimida:', 
-            `Tamanho original: ${Math.round(image.length / 1024)}KB`,
-            `Tamanho comprimido: ${Math.round(compressed.length / 1024)}KB`);
-        return compressed;
+        return await compressImage(image);
       } catch (error) {
-        console.error('Erro ao comprimir imagem de oferta:', error);
         return image; // Em caso de erro, usa a original
       }
     }
@@ -146,14 +145,14 @@ const processImageUrl = async (image: string) => {
     return image;
   } else if (image.startsWith('http')) {
     // Se for URL absoluta
-    return image.includes('?') ? image : `${image}?t=${Date.now()}`;
+    return image;
   } else {
     // Outros casos (pode ser UUID ou caminho relativo)
-    return image.includes('?') ? image : `${image}?t=${Date.now()}`;
+    return image;
   }
 };
 
-// Função simplificada para obter URL da imagem
+// Função simplificada para obter URL da imagem - otimizada
 const getImageUrl = (image) => {
   const defaultImage = "https://picsum.photos/id/237/300/300";
   
@@ -173,6 +172,13 @@ const getImageUrl = (image) => {
   return defaultImage;
 };
 
+// Componente de Loader
+const LoadingIndicator = () => (
+  <div className="flex justify-center items-center py-6">
+    <div className="w-8 h-8 border-4 border-gray-200 border-t-[#16A34A] rounded-full animate-spin"></div>
+  </div>
+);
+
 const Home = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [optimizedImages, setOptimizedImages] = useState<Record<string, string>>({});
@@ -186,41 +192,120 @@ const Home = () => {
     lastUpdate
   } = useStore();
   
-  // Processar e comprimir imagens base64 dos produtos
+  const [showMoreTestimonials, setShowMoreTestimonials] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
+
+  const testimonials = [
+    {
+      id: 1,
+      name: "Maria Jarluce",
+      initial: "M",
+      bgColor: "bg-green-100",
+      textColor: "text-green-700",
+      rating: 5,
+      comment: "Atendimento atencioso e eficaz, me sentir acolhida e satisfeita.",
+      isLocalGuide: false
+    },
+    {
+      id: 2,
+      name: "Johnny García",
+      initial: "J",
+      bgColor: "bg-purple-100",
+      textColor: "text-purple-700",
+      rating: 5,
+      comment: "Ótimo atendimento, loja moderna. Os gestores são pessoas de uma energia positiva, maravilhosos e na real, os produtos curam de verdade.",
+      isLocalGuide: false
+    },
+    {
+      id: 3,
+      name: "Valéria",
+      initial: "V",
+      bgColor: "bg-red-100",
+      textColor: "text-red-700",
+      isLocalGuide: true,
+      rating: 5,
+      comment: "Lugar agradável com um atendimento especial, profissional que sabe sugerir produtos de acordo com suas necessidades. Maravilhoso!!!"
+    },
+    {
+      id: 4,
+      name: "Lucia de fatima",
+      initial: "L",
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-700",
+      rating: 5,
+      comment: "Atendente muito educado, altamente preparado para responder as dúvidas dos clientes. Estão de parabéns",
+      isLocalGuide: false
+    },
+    {
+      id: 5,
+      name: "Francisca Vitorino",
+      initial: "F",
+      bgColor: "bg-yellow-100",
+      textColor: "text-yellow-700",
+      rating: 5,
+      comment: "A atendente Mariana foi muito prestativa, atenciosa e eficiente, senti-me bem acolhida.",
+      isLocalGuide: false
+    },
+    {
+      id: 6,
+      name: "Vitória alves",
+      initial: "V",
+      bgColor: "bg-pink-100",
+      textColor: "text-pink-700",
+      rating: 5,
+      comment: "Ótimo gosto muito dos produtos e do atendimento tbm vcs tão de parabéns",
+      isLocalGuide: false
+    }
+  ];
+
+  // Determinar quais depoimentos mostrar com base no estado
+  const visibleTestimonials = showMoreTestimonials ? testimonials : testimonials.slice(0, 3);
+
+  // Determinar quais produtos mostrar com base no estado
+  const visibleProducts = showAllProducts ? products : products.slice(0, 2);
+
+  // Processar e comprimir imagens base64 dos produtos - otimizado
   useEffect(() => {
     if (products && products.length > 0) {
       const processImages = async () => {
+        // Processamento em lote das imagens
         const optimized: Record<string, string> = {};
         
-        for (const product of products) {
-          if (product.image && isBase64Image(product.image) && product.image.length > 100000) {
+        // Usar Promise.all para processar imagens em paralelo
+        await Promise.all(products.map(async (product) => {
+          if (product.image && isBase64Image(product.image) && product.image.length > 50000) {
             try {
               optimized[product.id] = await processImageUrl(product.image);
-            } catch (error) {
-              console.error(`Erro ao processar imagem do produto ${product.name}:`, error);
+            } catch {
+              // Silenciar erros de processamento de imagem
             }
           }
-        }
+        }));
         
         setOptimizedImages(optimized);
       };
       
-      processImages();
+      // Usar setTimeout para não bloquear a renderização inicial
+      const timer = setTimeout(() => {
+        processImages();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [products]);
 
   // Efeito para animar a entrada quando os dados são carregados
   useEffect(() => {
     if (!isLoading && !isLoaded) {
+      // Reduzir timeout para 100ms para acelerar a animação inicial
       setTimeout(() => {
         setIsLoaded(true);
-      }, 300);
+      }, 100);
     }
   }, [isLoading]);
 
   // Forçar atualização dos dados quando o componente for montado
   useEffect(() => {
-    console.log("Home: Buscando dados atualizados...");
     refreshData();
   }, []);
 
@@ -250,6 +335,11 @@ const Home = () => {
     );
   }
 
+  // Obter URL de imagem otimizada ou original
+  const getOptimizedImage = (product) => {
+    return optimizedImages[product.id] || product.image;
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center py-6 px-3 md:py-10 md:px-4">
       <div 
@@ -267,7 +357,7 @@ const Home = () => {
           </div>
         </div>
         
-        <div className="space-y-3 px-4 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div className="space-y-3 px-4 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           {mainButtons.filter(button => button.status === 'destaque').map(button => (
             <LinkCard 
               key={`${button.id}-${lastUpdate}`}
@@ -291,8 +381,10 @@ const Home = () => {
           ))}
         </div>
         
-        {/* Carrossel de benefícios */}
-        <BenefitsCarousel />
+        {/* Carrossel de benefícios com lazy loading */}
+        <Suspense fallback={<LoadingIndicator />}>
+          <BenefitsCarousel />
+        </Suspense>
         
         <div className="px-4">
           <SectionTitle 
@@ -300,111 +392,60 @@ const Home = () => {
             subtitle="Nossa seleção especial para você"
           />
           
-          <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-            {products.map(product => (
+          <div className="grid grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            {visibleProducts.map(product => (
               <div key={`${product.id}-${lastUpdate}`}>
                 <ProductCard 
                   name={product.name}
                   price={product.price}
                   promoPrice={product.promo_price}
-                  image={product.image}
+                  image={getOptimizedImage(product)}
                   href="#"
                 />
               </div>
             ))}
           </div>
           
+          {!showAllProducts && products.length > 2 && (
+            <button 
+              className="w-full py-3 mt-3 mb-6 text-center text-green-600 font-medium hover:bg-green-50 transition-colors border border-green-200 rounded-lg flex items-center justify-center"
+              onClick={() => setShowAllProducts(true)}
+            >
+              <span>Ver mais produtos ({products.length - 2})</span>
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </button>
+          )}
+          
           <SectionTitle 
             title="Comentários" 
             subtitle="O que falam sobre a Naturalys"
           />
           
-          <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.6s' }}>
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex items-start">
-                <div className="bg-purple-100 rounded-full w-10 h-10 flex items-center justify-center text-purple-700 font-medium flex-shrink-0">
-                  J
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="font-medium text-gray-900">Johnny García</h3>
-                  <div className="text-yellow-400 flex mt-1 mb-2">
-                    ★★★★★
+          <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+            {visibleTestimonials.map(testimonial => (
+              <div key={testimonial.id} className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                <div className="flex items-start">
+                  <div className={`${testimonial.bgColor} rounded-full w-10 h-10 flex items-center justify-center ${testimonial.textColor} font-medium flex-shrink-0`}>
+                    {testimonial.initial}
                   </div>
-                  <p className="text-gray-600 text-sm">
-                    Ótimo atendimento, loja moderna. Os gestores são pessoas de uma energia positiva, maravilhosos e na real, os produtos curam de verdade.
-                  </p>
+                  <div className="ml-3 flex-1">
+                    <h3 className="font-medium text-gray-900">{testimonial.name}</h3>
+                    {testimonial.isLocalGuide && <p className="text-xs text-gray-500 mt-0 mb-1">Local Guide</p>}
+                    <div className="text-yellow-400 flex mt-1 mb-2">★★★★★</div>
+                    <p className="text-gray-600 text-sm">{testimonial.comment}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex items-start">
-                <div className="bg-red-100 rounded-full w-10 h-10 flex items-center justify-center text-red-700 font-medium flex-shrink-0">
-                  V
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="font-medium text-gray-900">Valéria</h3>
-                  <p className="text-xs text-gray-500 mt-0 mb-1">Local Guide</p>
-                  <div className="text-yellow-400 flex mt-1 mb-2">
-                    ★★★★★
-                  </div>
-                  <p className="text-gray-600 text-sm">
-                    Lugar agradável com um atendimento especial, profissional que sabe sugerir produtos de acordo com suas necessidades. Maravilhoso!!!
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex items-start">
-                <div className="bg-blue-100 rounded-full w-10 h-10 flex items-center justify-center text-blue-700 font-medium flex-shrink-0">
-                  F
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="font-medium text-gray-900">Francisca Vitorino</h3>
-                  <div className="text-yellow-400 flex mt-1 mb-2">
-                    ★★★★★
-                  </div>
-                  <p className="text-gray-600 text-sm">
-                    A atendente Mariana foi muito prestativa, atenciosa e eficiente, senti-me bem acolhida.
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex items-start">
-                <div className="bg-green-100 rounded-full w-10 h-10 flex items-center justify-center text-green-700 font-medium flex-shrink-0">
-                  M
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="font-medium text-gray-900">Maria Susanna da Silveira Dantas</h3>
-                  <div className="text-yellow-400 flex mt-1 mb-2">
-                    ★★★★★
-                  </div>
-                  <p className="text-gray-600 text-sm">
-                    Sempre o melhor atendimento ❤️ e preço também ✅
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-              <div className="flex items-start">
-                <div className="bg-yellow-100 rounded-full w-10 h-10 flex items-center justify-center text-yellow-700 font-medium flex-shrink-0">
-                  M
-                </div>
-                <div className="ml-3 flex-1">
-                  <h3 className="font-medium text-gray-900">Maria Jarluce</h3>
-                  <div className="text-yellow-400 flex mt-1 mb-2">
-                    ★★★★★
-                  </div>
-                  <p className="text-gray-600 text-sm">
-                    Atendimento atencioso e eficaz, me sentir acolhida e satisfeita.
-                  </p>
-                </div>
-              </div>
-            </div>
+            ))}
+
+            {!showMoreTestimonials && (
+              <button 
+                className="w-full py-3 text-center text-green-600 font-medium hover:bg-green-50 transition-colors border border-green-200 rounded-lg"
+                onClick={() => setShowMoreTestimonials(true)}
+              >
+                Ver mais comentários ({testimonials.length - 3})
+              </button>
+            )}
           </div>
           
           <SectionTitle 
@@ -412,7 +453,7 @@ const Home = () => {
             subtitle="Enviamos para todo o Brasil"
           />
           
-          <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.7s' }}>
+          <div className="space-y-3 animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <a 
               href={`https://wa.me/${settings?.whatsapp_number?.replace(/\D/g, '')}`}
               target="_blank"

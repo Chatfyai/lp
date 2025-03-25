@@ -366,64 +366,67 @@ export type Database = {
       }
       store_settings: {
         Row: {
-          address: string | null
-          created_at: string | null
-          description: string | null
           id: string
-          instagram_handle: string | null
-          open_saturday: boolean | null
-          open_sunday: boolean | null
-          open_weekdays: boolean | null
-          saturday_close_time: string | null
-          saturday_open_time: string | null
-          store_image: string
           store_name: string
-          sunday_close_time: string | null
-          sunday_open_time: string | null
-          updated_at: string | null
-          weekday_close_time: string | null
-          weekday_open_time: string | null
-          whatsapp_number: string | null
+          description: string
+          whatsapp_number: string
+          instagram_handle: string
+          address: string
+          open_weekdays: boolean
+          open_saturday: boolean
+          open_sunday: boolean
+          weekday_open_time: string
+          weekday_close_time: string
+          saturday_open_time: string
+          saturday_close_time: string
+          sunday_open_time: string
+          sunday_close_time: string
+          store_image: string
+          logo_url: string
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          address?: string | null
-          created_at?: string | null
-          description?: string | null
           id?: string
-          instagram_handle?: string | null
-          open_saturday?: boolean | null
-          open_sunday?: boolean | null
-          open_weekdays?: boolean | null
-          saturday_close_time?: string | null
-          saturday_open_time?: string | null
+          store_name: string
+          description: string
+          whatsapp_number?: string
+          instagram_handle?: string
+          address?: string
+          open_weekdays?: boolean
+          open_saturday?: boolean
+          open_sunday?: boolean
+          weekday_open_time?: string
+          weekday_close_time?: string
+          saturday_open_time?: string
+          saturday_close_time?: string
+          sunday_open_time?: string
+          sunday_close_time?: string
           store_image?: string
-          store_name?: string
-          sunday_close_time?: string | null
-          sunday_open_time?: string | null
-          updated_at?: string | null
-          weekday_close_time?: string | null
-          weekday_open_time?: string | null
-          whatsapp_number?: string | null
+          logo_url?: string
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          address?: string | null
-          created_at?: string | null
-          description?: string | null
           id?: string
-          instagram_handle?: string | null
-          open_saturday?: boolean | null
-          open_sunday?: boolean | null
-          open_weekdays?: boolean | null
-          saturday_close_time?: string | null
-          saturday_open_time?: string | null
-          store_image?: string
           store_name?: string
-          sunday_close_time?: string | null
-          sunday_open_time?: string | null
-          updated_at?: string | null
-          weekday_close_time?: string | null
-          weekday_open_time?: string | null
-          whatsapp_number?: string | null
+          description?: string
+          whatsapp_number?: string
+          instagram_handle?: string
+          address?: string
+          open_weekdays?: boolean
+          open_saturday?: boolean
+          open_sunday?: boolean
+          weekday_open_time?: string
+          weekday_close_time?: string
+          saturday_open_time?: string
+          saturday_close_time?: string
+          sunday_open_time?: string
+          sunday_close_time?: string
+          store_image?: string
+          logo_url?: string
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
